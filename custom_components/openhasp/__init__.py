@@ -147,6 +147,7 @@ HASP_STATUSUPDATE_SCHEMA = vol.Schema(
         vol.Required("version"): cv.string,
         vol.Required("uptime"): int,
         vol.Required("canUpdate"): cv.boolean,
+        vol.Optional("ip"): cv.string,  # <-- Added for dynamic IP
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -441,6 +442,24 @@ class SwitchPlate(RestoreEntity):
                     )
                 self._available = True
                 self._statusupdate = message
+
+                # If "ip" is reported, update config entry + device registry
+                if "ip" in message:
+                    self._statusupdate["ip"] = message["ip"]
+                    new_url = f"http://{message['ip']}/"
+                    old_url = self._entry.data.get(DISCOVERED_URL, "")
+                    if new_url != old_url:
+                        _LOGGER.debug("IP changed to %s, updating config entry URL...", new_url)
+                        new_data = dict(self._entry.data)
+                        new_data[DISCOVERED_URL] = new_url
+                        self.hass.config_entries.async_update_entry(self._entry, data=new_data)
+
+                        dev_reg = dr.async_get(self.hass)
+                        device = dev_reg.async_get_device(
+                            identifiers={(DOMAIN, self._entry.data[CONF_HWID])}
+                        )
+                        if device:
+                            dev_reg.async_update_device(device.id, configuration_url=new_url)
 
                 self._page = message[ATTR_PAGE]
                 self.async_write_ha_state()
