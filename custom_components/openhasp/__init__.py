@@ -188,13 +188,27 @@ async def async_setup(hass, config):
         _LOGGER, DOMAIN, hass
     )
 
-    component.async_register_entity_service(SERVICE_WAKEUP, {}, "async_wakeup")
+    # Define minimal schemas so that each service is recognized as an entity service
+    WAKEUP_SCHEMA = cv.make_entity_service_schema({})
+    PAGE_NEXT_SCHEMA = cv.make_entity_service_schema({})
+    PAGE_PREV_SCHEMA = cv.make_entity_service_schema({})
+
     component.async_register_entity_service(
-        SERVICE_PAGE_NEXT, {}, "async_change_page_next"
+        SERVICE_WAKEUP,
+        WAKEUP_SCHEMA,
+        "async_wakeup"
     )
     component.async_register_entity_service(
-        SERVICE_PAGE_PREV, {}, "async_change_page_prev"
+        SERVICE_PAGE_NEXT,
+        PAGE_NEXT_SCHEMA,
+        "async_change_page_next"
     )
+    component.async_register_entity_service(
+        SERVICE_PAGE_PREV,
+        PAGE_PREV_SCHEMA,
+        "async_change_page_prev"
+    )
+
     component.async_register_entity_service(
         SERVICE_PAGE_CHANGE, {vol.Required(ATTR_PAGE): int}, "async_change_page"
     )
