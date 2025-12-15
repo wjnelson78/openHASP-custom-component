@@ -108,6 +108,10 @@ def hasp_object(value):
     raise vol.Invalid("Not an HASP-LVGL object p#b#")
 
 
+def make_plate_url(ip_address: str) -> str:
+    """Create a configuration URL for an openHASP plate from its IP address."""
+    return f"http://{ip_address}/"
+
 # Configuration YAML schemas
 EVENT_SCHEMA = cv.schema_with_slug_keys(cv.SCRIPT_SCHEMA)
 
@@ -427,6 +431,21 @@ class SwitchPlate(RestoreEntity):
                     )
                 self._available = True
                 self._statusupdate = message
+
+                # Update config entry and device registry if IP changed
+                if "ip" in message:
+                    new_url = make_plate_url(message["ip"])
+                    old_url = self._entry.data.get(DISCOVERED_URL, "")
+                    if new_url != old_url:
+                        _LOGGER.debug(
+                            "Plate %s IP changed, updating URL to %s",
+                            self._entry.data[CONF_NAME],
+                            new_url,
+                        )
+                        self.hass.config_entries.async_update_entry(
+                            self._entry,
+                            data={**self._entry.data, DISCOVERED_URL: new_url},
+                        )
 
                 self._page = message[ATTR_PAGE]
                 self.async_write_ha_state()
